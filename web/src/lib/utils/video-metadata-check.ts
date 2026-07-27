@@ -1,17 +1,21 @@
-const MAKE_ATOM_BYTES = new Uint8Array([0xa9, 0x6d, 0x61, 0x6b]); // '©mak'
-const MODEL_ATOM_BYTES = new Uint8Array([0xa9, 0x6d, 0x6f, 0x64]); // '©mod'
-
 const asciiBytes = (text: string): Uint8Array => new Uint8Array([...text].map((c) => c.charCodeAt(0)));
 
-const MAKE_MARKERS: Uint8Array[] = [
-  MAKE_ATOM_BYTES,
+// Real-world device-identity marker presence checks. Not split by "make" vs "model" — vendors don't
+// consistently separate the two (e.g. Samsung has no manufacturer field at all, just a device name
+// and an internal model number), so this is a flat "any known identity marker present" check.
+const DEVICE_IDENTITY_MARKERS: Uint8Array[] = [
+  new Uint8Array([0xa9, 0x6d, 0x61, 0x6b]), // '©mak' - classic QuickTime (Apple)
+  new Uint8Array([0xa9, 0x6d, 0x6f, 0x64]), // '©mod' - classic QuickTime (Apple)
   asciiBytes('com.apple.quicktime.make'),
-  asciiBytes('com.android.manufacturer'),
-];
-const MODEL_MARKERS: Uint8Array[] = [
-  MODEL_ATOM_BYTES,
   asciiBytes('com.apple.quicktime.model'),
+  asciiBytes('com.android.manufacturer'), // stock Android / Google
   asciiBytes('com.android.model'),
+  asciiBytes('manu'), // Google Open Spherical Camera API (HTC, 360-degree cameras)
+  asciiBytes('modl'),
+  asciiBytes('auth'), // Samsung proprietary udta scheme (device name)
+  asciiBytes('mdln'), // Samsung proprietary udta scheme (model number, nested under smta)
+  asciiBytes('smta'), // Samsung metadata container
+  asciiBytes('cami'), // Samsung camera-info container
 ];
 
 const MOOV_MAX_BYTES = 200 * 1024 * 1024; // sanity cap; real moov boxes are far smaller
@@ -95,7 +99,7 @@ function containsSubsequence(haystack: Uint8Array, needle: Uint8Array): boolean 
   return false;
 }
 
-// Returns 'ok', 'missing' (neither Make nor Model marker found), or 'parse-error' (the moov box
+// Returns 'ok', 'missing' (no device-identity marker found), or 'parse-error' (the moov box
 // could not be conclusively located/read, e.g. a malformed or truncated container).
 export async function checkOriginalVideoMetadata(file: File): Promise<'ok' | 'missing' | 'parse-error'> {
   try {
@@ -105,9 +109,8 @@ export async function checkOriginalVideoMetadata(file: File): Promise<'ok' | 'mi
     }
 
     const bytes = new Uint8Array(moov);
-    const hasMake = MAKE_MARKERS.some((marker) => containsSubsequence(bytes, marker));
-    const hasModel = MODEL_MARKERS.some((marker) => containsSubsequence(bytes, marker));
-    return hasMake || hasModel ? 'ok' : 'missing';
+    const hasIdentityMarker = DEVICE_IDENTITY_MARKERS.some((marker) => containsSubsequence(bytes, marker));
+    return hasIdentityMarker ? 'ok' : 'missing';
   } catch {
     return 'parse-error';
   }

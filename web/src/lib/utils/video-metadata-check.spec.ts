@@ -79,6 +79,23 @@ describe('checkOriginalVideoMetadata', () => {
     await expect(checkOriginalVideoMetadata(file)).resolves.toBe('ok');
   });
 
+  it('returns ok for the Samsung proprietary udta scheme', async () => {
+    const smta = box('smta', box('mdln', ascii('dummy-model-number')));
+    const udta = box('udta', box('auth', ascii('dummy-device-name')), smta);
+    const moov = box('moov', udta);
+    const file = toFile(concatBytes([FTYP, moov, DUMMY_MDAT]));
+
+    await expect(checkOriginalVideoMetadata(file)).resolves.toBe('ok');
+  });
+
+  it('returns ok for the Google Open Spherical Camera API manu/modl scheme', async () => {
+    const udta = box('udta', box('manu', ascii('dummy-make')), box('modl', ascii('dummy-model')));
+    const moov = box('moov', udta);
+    const file = toFile(concatBytes([FTYP, moov, DUMMY_MDAT]));
+
+    await expect(checkOriginalVideoMetadata(file)).resolves.toBe('ok');
+  });
+
   it('returns missing when moov has no Make/Model markers', async () => {
     const moov = box('moov', box('udta', box('©day', ascii('2024:01:01'))));
     const file = toFile(concatBytes([FTYP, moov, DUMMY_MDAT]));
