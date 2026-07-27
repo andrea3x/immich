@@ -2184,6 +2184,7 @@
   "upload_error_with_count": "Invio in errore per {count, plural, one {# risorsa} other {# risorse}}",
   "upload_errors": "Caricamento completato con {count, plural, one {# errore} other {# errori}}, ricarica la pagina per vedere le risorse caricate.",
   "upload_finished": "Upload terminato",
+  "upload_original_files_prompt": "Stai per caricare le tue foto e i tuoi video. Assicurati di selezionare i file originali — non quelli compressi o ricondivisi tramite app come WhatsApp — altrimenti il caricamento verrà rifiutato con un errore \"No Original File\".",
   "upload_progress": "Rimanenti {remaining, number} - Processati {processed, number}/{total, number}",
   "upload_skipped_duplicates": "{count, plural, one {Ignorata # risorsa duplicata} other {Ignorate # risorse duplicate}}",
   "upload_status_duplicates": "Duplicati",

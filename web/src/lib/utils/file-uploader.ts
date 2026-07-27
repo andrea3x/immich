@@ -6,7 +6,7 @@ import {
   getBaseUrl,
   type AssetMediaResponseDto,
 } from '@immich/sdk';
-import { toastManager } from '@immich/ui';
+import { modalManager, toastManager } from '@immich/ui';
 import exifr from 'exifr';
 import { tick } from 'svelte';
 import { t } from 'svelte-i18n';
@@ -110,6 +110,16 @@ export const fileUploadHandler = async ({
   albumId,
   isLockedAssets = false,
 }: FileUploadHandlerParams): Promise<string[]> => {
+  const confirmed = await modalManager.showDialog({
+    title: get(t)('upload'),
+    prompt: get(t)('upload_original_files_prompt'),
+    confirmText: get(t)('ok'),
+    confirmColor: 'primary',
+  });
+  if (!confirmed) {
+    return [];
+  }
+
   const extensions = uploadManager.getExtensions();
   const promises = [];
   for (const file of files) {

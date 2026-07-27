@@ -1,4 +1,5 @@
 import { AssetMediaStatus, type AssetMediaResponseDto, type UserAdminResponseDto } from '@immich/sdk';
+import { modalManager } from '@immich/ui';
 import { get } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { authManager } from '$lib/managers/auth-manager.svelte';
@@ -10,14 +11,17 @@ import { preferencesFactory } from '@test-data/factories/preferences-factory';
 import { fileUploadHandler } from './file-uploader';
 
 describe('fileUploader error handling', () => {
-  const mockFile = new File(['content'], 'test.jpg', { type: 'image/jpeg' });
+  // .png is used because it's outside the extensions checked for original-file metadata (see ORIGINAL_METADATA_EXTENSIONS in file-uploader.ts),
+  // so these generic upload-flow tests aren't affected by the metadata parse result of this fake, non-image file content.
+  const mockFile = new File(['content'], 'test.png', { type: 'image/png' });
   const mockUserObject = { id: 'user-123', email: 'test@example.com' } as UserAdminResponseDto;
   const mockError = new Error('Upload failed');
   const mockUploadResponse = { id: 'mock-id', status: AssetMediaStatus.Created } as AssetMediaResponseDto;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.spyOn(uploadManager, 'getExtensions').mockReturnValue(['.jpg']);
+    vi.spyOn(uploadManager, 'getExtensions').mockReturnValue(['.png']);
+    vi.spyOn(modalManager, 'showDialog').mockResolvedValue(true);
     uploadAssetsStore.reset();
     authManager.reset();
   });
@@ -68,5 +72,16 @@ describe('fileUploader error handling', () => {
     const items = get(uploadAssetsStore);
     expect(items.length).toBe(1);
     expect(items[0].state).toBe(UploadState.STARTED);
+  });
+
+  it('should not upload anything when the confirmation dialog is cancelled', async () => {
+    vi.spyOn(modalManager, 'showDialog').mockResolvedValue(false);
+    const uploadRequestSpy = vi.spyOn(utils, 'uploadRequest');
+
+    const result = await fileUploadHandler({ files: [mockFile] });
+
+    expect(result).toEqual([]);
+    expect(get(uploadAssetsStore).length).toBe(0);
+    expect(uploadRequestSpy).not.toHaveBeenCalled();
   });
 });

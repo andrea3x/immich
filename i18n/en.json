@@ -2189,6 +2189,7 @@
   "upload_error_with_count": "Upload error for {count, plural, one {# asset} other {# assets}}",
   "upload_errors": "Upload completed with {count, plural, one {# error} other {# errors}}, refresh the page to see new upload assets.",
   "upload_finished": "Upload finished",
+  "upload_original_files_prompt": "You're about to upload your photos and videos. Please make sure to select the original files — not ones that have been compressed or re-shared through apps like WhatsApp — otherwise the upload will be rejected with a \"No Original File\" error.",
   "upload_progress": "Remaining {remaining, number} - Processed {processed, number}/{total, number}",
   "upload_skipped_duplicates": "Skipped {count, plural, one {# duplicate asset} other {# duplicate assets}}",
   "upload_status_duplicates": "Duplicates",
