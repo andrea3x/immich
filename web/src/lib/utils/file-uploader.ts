@@ -7,6 +7,7 @@ import {
   type AssetMediaResponseDto,
 } from '@immich/sdk';
 import { toastManager } from '@immich/ui';
+import exifr from 'exifr';
 import { tick } from 'svelte';
 import { t } from 'svelte-i18n';
 import { get } from 'svelte/store';
@@ -134,6 +135,19 @@ function getDeviceAssetId(asset: File) {
   return 'web-' + asset.name + '-' + asset.lastModified;
 }
 
+const ORIGINAL_METADATA_EXTENSIONS = ['.jpg', '.jpeg', '.heic', '.heif'];
+const ORIGINAL_METADATA_TAGS = ['Make', 'Model', 'LensModel', 'ISO'];
+
+// Returns 'ok', 'missing' (no camera tags found), or 'parse-error' (file couldn't be read)
+async function checkOriginalMetadata(file: File): Promise<'ok' | 'missing' | 'parse-error'> {
+  try {
+    const tags = await exifr.parse(file, { pick: ORIGINAL_METADATA_TAGS });
+    return ORIGINAL_METADATA_TAGS.some((tag) => tags?.[tag] !== undefined) ? 'ok' : 'missing';
+  } catch {
+    return 'parse-error';
+  }
+}
+
 function hashFile(file: File): Promise<string> {
   return new Promise<string>((resolve, reject) => {
     const worker = new Worker(new URL('$lib/workers/hash-file.ts', import.meta.url), { type: 'module' });
@@ -179,6 +193,19 @@ async function fileUploader({
   const wasInitiallyLoggedIn = !!authManager.authenticated;
 
   uploadAssetsStore.markStarted(deviceAssetId);
+
+  const name = assetFile.name.toLowerCase();
+  if (ORIGINAL_METADATA_EXTENSIONS.some((ext) => name.endsWith(ext))) {
+    const metadataCheck = await checkOriginalMetadata(assetFile);
+    if (metadataCheck !== 'ok') {
+      uploadAssetsStore.track('error');
+      uploadAssetsStore.updateItem(deviceAssetId, {
+        state: UploadState.ERROR,
+        error: metadataCheck === 'missing' ? $t('errors.no_original_file') : $t('errors.parse_error'),
+      });
+      return;
+    }
+  }
 
   try {
     const formData = new FormData();
