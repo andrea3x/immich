@@ -90,33 +90,42 @@ export const openFilePicker = async (options: FilePickerParam = {}) => {
   });
 };
 
+async function confirmUpload(): Promise<boolean> {
+  return modalManager.showDialog({
+    title: get(t)('upload'),
+    prompt: get(t)('upload_original_files_prompt'),
+    confirmText: get(t)('ok'),
+    confirmColor: 'primary',
+  });
+}
+
 export const openFileUploadDialog = async (options: FileUploadParam = {}) => {
   const { albumId, multiple = true } = options;
+  if (!(await confirmUpload())) {
+    return [];
+  }
+
   const extensions = uploadManager.getExtensions();
   const files = await openFilePicker({
     multiple,
     extensions,
   });
 
-  return fileUploadHandler({ files, albumId });
+  return fileUploadHandler({ files, albumId, skipConfirmation: true });
 };
 
 type FileUploadHandlerParams = Omit<FileUploaderParams, 'deviceAssetId' | 'assetFile'> & {
   files: File[];
+  skipConfirmation?: boolean;
 };
 
 export const fileUploadHandler = async ({
   files,
   albumId,
   isLockedAssets = false,
+  skipConfirmation = false,
 }: FileUploadHandlerParams): Promise<string[]> => {
-  const confirmed = await modalManager.showDialog({
-    title: get(t)('upload'),
-    prompt: get(t)('upload_original_files_prompt'),
-    confirmText: get(t)('ok'),
-    confirmColor: 'primary',
-  });
-  if (!confirmed) {
+  if (!skipConfirmation && !(await confirmUpload())) {
     return [];
   }
 
