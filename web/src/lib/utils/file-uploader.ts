@@ -19,6 +19,7 @@ import { UploadState } from '$lib/types';
 import { uploadRequest } from '$lib/utils';
 import { ExecutorQueue } from '$lib/utils/executor-queue';
 import { asQueryString } from '$lib/utils/shared-links';
+import { checkOriginalVideoMetadata } from '$lib/utils/video-metadata-check';
 import { handleError } from './handle-error';
 
 export const addDummyItems = () => {
@@ -156,6 +157,7 @@ function getDeviceAssetId(asset: File) {
 
 const ORIGINAL_METADATA_EXTENSIONS = ['.jpg', '.jpeg', '.heic', '.heif'];
 const ORIGINAL_METADATA_TAGS = ['Make', 'Model', 'LensModel', 'ISO'];
+const ORIGINAL_METADATA_VIDEO_EXTENSIONS = ['.mp4', '.mov'];
 
 // Returns 'ok', 'missing' (no camera tags found), or 'parse-error' (file couldn't be read)
 async function checkOriginalMetadata(file: File): Promise<'ok' | 'missing' | 'parse-error'> {
@@ -165,6 +167,15 @@ async function checkOriginalMetadata(file: File): Promise<'ok' | 'missing' | 'pa
   } catch {
     return 'parse-error';
   }
+}
+
+function rejectForMetadataCheck(deviceAssetId: string, result: 'missing' | 'parse-error') {
+  const $t = get(t);
+  uploadAssetsStore.track('error');
+  uploadAssetsStore.updateItem(deviceAssetId, {
+    state: UploadState.ERROR,
+    error: result === 'missing' ? $t('errors.no_original_file') : $t('errors.parse_error'),
+  });
 }
 
 function hashFile(file: File): Promise<string> {
@@ -217,11 +228,13 @@ async function fileUploader({
   if (ORIGINAL_METADATA_EXTENSIONS.some((ext) => name.endsWith(ext))) {
     const metadataCheck = await checkOriginalMetadata(assetFile);
     if (metadataCheck !== 'ok') {
-      uploadAssetsStore.track('error');
-      uploadAssetsStore.updateItem(deviceAssetId, {
-        state: UploadState.ERROR,
-        error: metadataCheck === 'missing' ? $t('errors.no_original_file') : $t('errors.parse_error'),
-      });
+      rejectForMetadataCheck(deviceAssetId, metadataCheck);
+      return;
+    }
+  } else if (ORIGINAL_METADATA_VIDEO_EXTENSIONS.some((ext) => name.endsWith(ext))) {
+    const metadataCheck = await checkOriginalVideoMetadata(assetFile);
+    if (metadataCheck !== 'ok') {
+      rejectForMetadataCheck(deviceAssetId, metadataCheck);
       return;
     }
   }
