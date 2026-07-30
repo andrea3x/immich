@@ -12,6 +12,8 @@
 <img src="design/immich-logo-stacked-light.svg" width="300" title="Login With Custom URL">
 </p>
 <h3 align="center">High performance self-hosted photo and video management solution</h3>
+<h4 align="center">[Details about this fork below the image]</h3>
+<br/>
 <br/>
 <a href="https://immich.app">
 <img src="design/immich-screenshots.png" title="Main Screenshot">
@@ -41,7 +43,6 @@
   <a href="readme_i18n/README_ml_IN.md">മലയാളം</a>
 </p>
 
-
 > [!WARNING]
 > ⚠️ Always follow [3-2-1](https://www.backblaze.com/blog/the-3-2-1-backup-strategy/) backup plan for your precious photos and videos!
 > 
@@ -49,6 +50,22 @@
 
 > [!NOTE]
 > You can find the main documentation, including installation guides, at https://immich.app/.
+
+
+## Why this fork exists
+
+> [!NOTE]
+> This change is **client-side only**, in the **web app**. The mobile apps and server are unmodified.
+
+This fork adds a **guard against** silently **uploading non-original media**: phones and apps like WhatsApp often strip or recompress photos and videos before sharing, and Immich would otherwise accept those degraded copies without complaint. This fork detects and rejects them at upload time, and ships its own prebuilt server image for self-hosting.
+
+**How it works:**
+
+- **Images** — checks for camera EXIF tags (`Make`, `Model`, `LensModel`, `ISO`) via `exifr`.
+- **Videos** (`.mp4`/`.mov`) — scans the MP4 `moov` box for known device-identity markers (Apple, Android, Samsung, etc.).
+- If none are found, the upload is rejected with a `"No Original File"` or `"Parse Error"` message.
+- A confirmation dialog reminds users to pick original files before the file picker even opens.
+- A GitHub Actions workflow builds and publishes the server image for this fork.
 
 ## Links
 
